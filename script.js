@@ -18,32 +18,49 @@ const mainNav     = document.getElementById('mainNav');
 const progressBar = document.getElementById('progressBar');
 const navLinks    = document.querySelectorAll('.nav-link:not(.cta)');
 const sections    = document.querySelectorAll('section[id]');
+const backTopBtn  = document.getElementById('backTop');
 
+// Cache section offsets — only recalculate on resize, not every scroll
+let sectionOffsets = [];
+function cacheSectionOffsets() {
+  sectionOffsets = Array.from(sections).map(sec => ({
+    id:  sec.getAttribute('id'),
+    top: sec.offsetTop - 120
+  }));
+}
+cacheSectionOffsets();
+window.addEventListener('resize', cacheSectionOffsets, { passive: true });
+
+// Single rAF-throttled scroll handler
+let scrollTicking = false;
 window.addEventListener('scroll', () => {
-  const scrollY   = window.scrollY;
-  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-  const progress  = (scrollY / docHeight) * 100;
+  if (scrollTicking) return;
+  scrollTicking = true;
+  requestAnimationFrame(() => {
+    const scrollY   = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
 
-  // Pill nav background after 60px
-  mainNav.classList.toggle('scrolled', scrollY > 60);
+    // Nav pill
+    mainNav.classList.toggle('scrolled', scrollY > 60);
 
-  // Progress bar
-  progressBar.style.width = progress + '%';
+    // Progress bar
+    progressBar.style.width = ((scrollY / docHeight) * 100) + '%';
 
-  // Back-to-top button
-  document.getElementById('backTop').classList.toggle('visible', scrollY > 400);
+    // Back-to-top
+    backTopBtn.classList.toggle('visible', scrollY > 400);
 
-  // Active nav link
-  let current = '';
-  sections.forEach(sec => {
-    const top = sec.offsetTop - 120;
-    if (scrollY >= top) current = sec.getAttribute('id');
+    // Active nav link
+    let current = '';
+    for (let i = sectionOffsets.length - 1; i >= 0; i--) {
+      if (scrollY >= sectionOffsets[i].top) { current = sectionOffsets[i].id; break; }
+    }
+    navLinks.forEach(link => {
+      link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+    });
+
+    scrollTicking = false;
   });
-  navLinks.forEach(link => {
-    link.classList.remove('active');
-    if (link.getAttribute('href') === '#' + current) link.classList.add('active');
-  });
-});
+}, { passive: true });
 
 /* ── MOBILE DRAWER ───────────────────────────────────────────── */
 const navBurger      = document.getElementById('navBurger');
@@ -192,16 +209,6 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       e.preventDefault();
       target.scrollIntoView({ behavior: 'smooth' });
     }
-  });
-});
-
-/* ── HERO PARALLAX (subtle) ──────────────────────────────────── */
-const heroOrbs = document.querySelectorAll('.hero-orb');
-window.addEventListener('scroll', () => {
-  const y = window.scrollY;
-  heroOrbs.forEach((orb, i) => {
-    const speed = i === 0 ? 0.08 : 0.05;
-    orb.style.transform = `translateY(${y * speed}px)`;
   });
 });
 
