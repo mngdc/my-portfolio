@@ -1459,7 +1459,7 @@ body:has(button:hover) .cursor { width: 16px; height: 16px; background: var(--go
   .hero-photo {
     position: absolute;
     right: 24px;
-    top: 50%;
+    top: 35%;
     transform: translateY(-60%);
   }
   .hero-photo__ring       { width: 280px; height: 280px; }
@@ -1476,7 +1476,7 @@ body:has(button:hover) .cursor { width: 16px; height: 16px; background: var(--go
 
   .hero-photo {
     right: 16px;
-    top: 50%;
+    top: 35%;
     transform: translateY(-65%);
   }
   .hero-photo__ring       { width: 240px; height: 240px; }
