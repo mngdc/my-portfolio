@@ -248,6 +248,27 @@ function updateToggleIcon(theme) {
   }
   themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
 }
+/* ── CERT CARD CLICK → MODAL ─────────────────────────────────── */
+document.querySelectorAll('.cert-card').forEach(card => {
+  card.addEventListener('click', e => {
+    // Don't open modal if clicking directly on the "View Cert" button (handled below)
+    if (e.target.closest('.cert-card__view')) return;
+    const imgSrc     = card.getAttribute('data-img');
+    const viewBtn    = card.querySelector('.cert-card__view');
+    const certTitle  = viewBtn ? viewBtn.getAttribute('data-cert')   : '';
+    const certIssuer = viewBtn ? viewBtn.getAttribute('data-issuer') : '';
+    const certYear   = viewBtn ? viewBtn.getAttribute('data-year')   : '';
+    openCertModal(certTitle, certIssuer, certYear, imgSrc);
+  });
+});
+
+// Close any open preview when tapping elsewhere on mobile
+document.addEventListener('click', e => {
+  if (!e.target.closest('.cert-card')) {
+    document.querySelectorAll('.cert-card.preview-open').forEach(c => c.classList.remove('preview-open'));
+  }
+});
+
 /* ── CERT MODAL ──────────────────────────────────────────────── */
 const certModal        = document.getElementById('certModal');
 const certModalBackdrop= document.getElementById('certModalBackdrop');
@@ -255,11 +276,29 @@ const certModalClose   = document.getElementById('certModalClose');
 const certModalTitle   = document.getElementById('certModalTitle');
 const certModalIssuer  = document.getElementById('certModalIssuer');
 const certModalYear    = document.getElementById('certModalYear');
+const certModalPreview = document.getElementById('certModalPreview');
 
-function openCertModal(title, issuer, year) {
+function openCertModal(title, issuer, year, imgSrc) {
   certModalTitle.textContent  = title;
   certModalIssuer.textContent = issuer;
   certModalYear.textContent   = year;
+
+  // Clear previous preview content
+  certModalPreview.innerHTML = '';
+
+  if (imgSrc) {
+    const img = document.createElement('img');
+    img.src = imgSrc;
+    img.alt = title;
+    certModalPreview.appendChild(img);
+  } else {
+    certModalPreview.innerHTML = `
+      <div class="cert-modal__placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><circle cx="12" cy="14" r="3"/><path d="M9.5 17l-1 2 3.5-1 3.5 1-1-2"/></svg>
+        <span>Certificate Preview</span>
+      </div>`;
+  }
+
   certModal.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -272,10 +311,14 @@ document.addEventListener('click', e => {
   const viewBtn = e.target.closest('.cert-card__view');
   if (viewBtn && viewBtn.hasAttribute('data-cert')) {
     e.preventDefault();
+    e.stopPropagation();
+    const card   = viewBtn.closest('.cert-card');
+    const imgSrc = card ? card.getAttribute('data-img') : null;
     openCertModal(
       viewBtn.getAttribute('data-cert'),
       viewBtn.getAttribute('data-issuer'),
-      viewBtn.getAttribute('data-year')
+      viewBtn.getAttribute('data-year'),
+      imgSrc
     );
   }
 });
@@ -283,3 +326,106 @@ document.addEventListener('click', e => {
 certModalClose.addEventListener('click', closeCertModal);
 certModalBackdrop.addEventListener('click', closeCertModal);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCertModal(); });
+
+/* ── ACADEMIC CARD CLICK → IMAGE MODAL ───────────────────────── */
+// Reuse the cert modal for academic images
+document.querySelectorAll('.acad-card').forEach(card => {
+  card.addEventListener('click', () => {
+    const img     = card.querySelector('.acad-card__img-wrap img');
+    const title   = card.querySelector('.acad-card__title');
+    const subject = card.querySelector('.acad-card__subject');
+    const imgSrc  = img ? img.src : null;
+
+    certModalTitle.textContent  = title  ? title.textContent  : '';
+    certModalIssuer.textContent = subject ? subject.textContent : '';
+    certModalYear.textContent   = '';
+
+    certModalPreview.innerHTML = '';
+    if (imgSrc) {
+      const imgEl = document.createElement('img');
+      imgEl.src = imgSrc;
+      imgEl.alt = title ? title.textContent : '';
+      certModalPreview.appendChild(imgEl);
+    } else {
+      certModalPreview.innerHTML = `
+        <div class="cert-modal__placeholder">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span>No Image</span>
+        </div>`;
+    }
+
+    certModal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  });
+});
+/* ── ACADEMIC GALLERY CAROUSEL ───────────────────────────────── */
+(function () {
+  const track    = document.getElementById('acadTrack');
+  const prevBtn  = document.getElementById('acadPrev');
+  const nextBtn  = document.getElementById('acadNext');
+  const dotsWrap = document.getElementById('acadDots');
+  if (!track) return;
+
+  const cards = Array.from(track.querySelectorAll('.acad-card'));
+  let current = 0;
+
+  // Determine visible count based on viewport
+  function visibleCount() {
+    if (window.innerWidth <= 560) return 1;
+    if (window.innerWidth <= 900) return 2;
+    return 3;
+  }
+
+  function totalSlides() {
+    return Math.max(1, cards.length - visibleCount() + 1);
+  }
+
+  // Build dots
+  function buildDots() {
+    dotsWrap.innerHTML = '';
+    const n = totalSlides();
+    for (let i = 0; i < n; i++) {
+      const d = document.createElement('button');
+      d.className = 'acad-carousel__dot' + (i === current ? ' active' : '');
+      d.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+      d.addEventListener('click', () => goTo(i));
+      dotsWrap.appendChild(d);
+    }
+  }
+
+  function goTo(idx) {
+    current = Math.max(0, Math.min(idx, totalSlides() - 1));
+    const cardWidth = cards[0].offsetWidth + 16; // gap = 16px
+    track.style.transform = `translateX(-${current * cardWidth}px)`;
+    prevBtn.disabled = current === 0;
+    nextBtn.disabled = current >= totalSlides() - 1;
+    dotsWrap.querySelectorAll('.acad-carousel__dot').forEach((d, i) => {
+      d.classList.toggle('active', i === current);
+    });
+  }
+
+  prevBtn.addEventListener('click', () => goTo(current - 1));
+  nextBtn.addEventListener('click', () => goTo(current + 1));
+
+  // Recalculate on resize
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      current = 0;
+      buildDots();
+      goTo(0);
+    }, 150);
+  }, { passive: true });
+
+  // Touch/swipe support
+  let touchStartX = 0;
+  track.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  track.addEventListener('touchend', e => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) goTo(diff > 0 ? current + 1 : current - 1);
+  }, { passive: true });
+
+  buildDots();
+  goTo(0);
+})();
