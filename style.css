@@ -1699,36 +1699,6 @@ body:has(button:hover) .cursor { width: 16px; height: 16px; background: var(--go
   will-change: transform;
 }
 
-/* On mobile: switch to native scroll-snap for pixel-perfect centering */
-@media (max-width: 560px) {
-  .acad-carousel {
-    gap: 0;
-  }
-  .acad-carousel__btn {
-    display: none;
-  }
-  .acad-carousel__track-wrap {
-    overflow-x: scroll;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    border-radius: 0;
-  }
-  .acad-carousel__track-wrap::-webkit-scrollbar { display: none; }
-  .acad-carousel__track {
-    transition: none;
-    transform: none !important;
-    gap: 12px;
-    padding: 0 20px;
-  }
-  .acad-card {
-    flex: 0 0 calc(100% - 40px);
-    scroll-snap-align: center;
-  }
-}
-
 /* Cards */
 .acad-card {
   flex: 0 0 calc(33.333% - 11px);
@@ -1746,7 +1716,10 @@ body:has(button:hover) .cursor { width: 16px; height: 16px; background: var(--go
   .acad-card { flex: 0 0 calc(50% - 8px); }
 }
 @media (max-width: 560px) {
-  .acad-card { flex: 0 0 85vw; }
+  /* Hide arrow buttons on mobile — swipe only */
+  .acad-carousel__btn { display: none; }
+  /* Card fills the full track-wrap width */
+  .acad-card { flex: 0 0 100%; }
 }
 
 .acad-card:hover {

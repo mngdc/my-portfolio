@@ -373,9 +373,10 @@ document.querySelectorAll('.acad-card').forEach(card => {
   const cards = Array.from(track.querySelectorAll('.acad-card'));
   let current = 0;
 
-  // Determine visible count based on viewport
+  function isMobile() { return window.innerWidth <= 560; }
+
   function visibleCount() {
-    if (window.innerWidth <= 560) return 1;
+    if (isMobile()) return 1;
     if (window.innerWidth <= 900) return 2;
     return 3;
   }
@@ -384,7 +385,6 @@ document.querySelectorAll('.acad-card').forEach(card => {
     return Math.max(1, cards.length - visibleCount() + 1);
   }
 
-  // Build dots
   function buildDots() {
     dotsWrap.innerHTML = '';
     const n = totalSlides();
@@ -399,17 +399,22 @@ document.querySelectorAll('.acad-card').forEach(card => {
 
   function goTo(idx) {
     current = Math.max(0, Math.min(idx, totalSlides() - 1));
-    const cardWidth = cards[0].offsetWidth + 16; // gap = 16px
-    track.style.transform = `translateX(-${current * cardWidth}px)`;
-    prevBtn.disabled = current === 0;
-    nextBtn.disabled = current >= totalSlides() - 1;
+
+    // Measure card width fresh each time (handles resize / reflow correctly)
+    const gap = 16;
+    const cardWidth = cards[0].getBoundingClientRect().width;
+    track.style.transform = `translateX(-${current * (cardWidth + gap)}px)`;
+
+    if (prevBtn) prevBtn.disabled = current === 0;
+    if (nextBtn) nextBtn.disabled = current >= totalSlides() - 1;
+
     dotsWrap.querySelectorAll('.acad-carousel__dot').forEach((d, i) => {
       d.classList.toggle('active', i === current);
     });
   }
 
-  prevBtn.addEventListener('click', () => goTo(current - 1));
-  nextBtn.addEventListener('click', () => goTo(current + 1));
+  if (prevBtn) prevBtn.addEventListener('click', () => goTo(current - 1));
+  if (nextBtn) nextBtn.addEventListener('click', () => goTo(current + 1));
 
   // Recalculate on resize
   let resizeTimer;
@@ -422,10 +427,28 @@ document.querySelectorAll('.acad-card').forEach(card => {
     }, 150);
   }, { passive: true });
 
-  // Touch/swipe support
+  // Touch / swipe — works on both mobile and desktop touch
   let touchStartX = 0;
-  track.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  let touchStartY = 0;
+  let dragging = false;
+
+  track.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    dragging = true;
+  }, { passive: true });
+
+  track.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const dx = Math.abs(e.touches[0].clientX - touchStartX);
+    const dy = Math.abs(e.touches[0].clientY - touchStartY);
+    // If horizontal swipe is dominant, prevent page scroll
+    if (dx > dy && dx > 8) e.preventDefault();
+  }, { passive: false });
+
   track.addEventListener('touchend', e => {
+    if (!dragging) return;
+    dragging = false;
     const diff = touchStartX - e.changedTouches[0].clientX;
     if (Math.abs(diff) > 40) goTo(diff > 0 ? current + 1 : current - 1);
   }, { passive: true });
