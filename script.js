@@ -283,6 +283,9 @@ function openCertModal(title, issuer, year, imgSrc) {
   certModalIssuer.textContent = issuer;
   certModalYear.textContent   = year;
 
+  // Mark as cert mode (16:9 ratio)
+  certModal.classList.add('cert-mode');
+
   // Clear previous preview content
   certModalPreview.innerHTML = '';
 
@@ -304,6 +307,7 @@ function openCertModal(title, issuer, year, imgSrc) {
 }
 function closeCertModal() {
   certModal.classList.remove('open');
+  certModal.classList.remove('cert-mode');
   document.body.style.overflow = '';
 }
 
